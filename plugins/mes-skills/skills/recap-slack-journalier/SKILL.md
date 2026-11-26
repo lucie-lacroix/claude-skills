@@ -1,15 +1,15 @@
 ---
 name: "recap-slack-journalier"
-description: "Recap Slack du dernier jour ouvré pour Lucie (canaux 2-* et 5-*, DMs, mentions) : top infos, sujets traités par elle, à traiter, relances, en plus. Publié en toggle dans sa page Notion. À utiliser pour tout recap/point Slack, « qu'ai-je raté », « mes relances »."
+description: "Recap Slack + Gmail du dernier jour ouvré pour Lucie (canaux Slack 2-* et 5-*, DMs, mentions, et mails Gmail) : top infos, sujets traités par elle, à traiter, relances, en plus. Publié en toggle dans sa page Notion. À utiliser pour tout recap/point Slack ou mails, « qu'ai-je raté », « mes relances »."
 ---
 
-# Récap du Jour (Slack → Notion)
+# Récap du Jour (Slack + Gmail → Notion)
 
-Objectif : donner à Lucie, en quelques minutes de lecture, une vue fiable de ce qui s'est passé sur Slack depuis le dernier jour ouvré, de ce qu'elle a elle-même traité, de ce qui l'attend et de ce qu'elle doit relancer. La valeur du recap tient à sa fiabilité : mieux vaut signaler « à vérifier » que d'affirmer à tort qu'un sujet est clos ou qu'il lui revient.
+Objectif : donner à Lucie, en quelques minutes de lecture, une vue fiable de ce qui s'est passé sur Slack et dans sa boîte Gmail depuis le dernier jour ouvré, de ce qu'elle a elle-même traité, de ce qui l'attend et de ce qu'elle doit relancer. La valeur du recap tient à sa fiabilité : mieux vaut signaler « à vérifier » que d'affirmer à tort qu'un sujet est clos ou qu'il lui revient.
 
-## Règle absolue : Slack en lecture seule
+## Règle absolue : Slack et Gmail en lecture seule
 
-N'envoie jamais rien sur Slack. N'utilise aucun outil d'écriture Slack : pas de `slack_send_message`, `slack_send_message_draft`, `slack_schedule_message`, pas de réaction, pas de création ou modification de canvas, de liste ou de conversation. Utilise uniquement des outils de lecture et de recherche. Les brouillons de relance vivent uniquement dans le recap Notion, sous forme de texte que Lucie copiera et enverra elle-même ; ils ne sont jamais déposés dans Slack, pas même comme brouillon Slack.
+N'envoie jamais rien sur Slack ni par mail. N'utilise aucun outil d'écriture Slack : pas de `slack_send_message`, `slack_send_message_draft`, `slack_schedule_message`, pas de réaction, pas de création ou modification de canvas, de liste ou de conversation. Pour Gmail, n'utilise que `search_threads`, `get_thread` et `get_message` (et `list_labels` si besoin). Aucun outil qui envoie, répond (`reply`, `send_message`), transfère (`forward`), crée ou modifie un brouillon, pose ou retire un libellé, marque comme spam, met à la corbeille ou supprime. Utilise uniquement des outils de lecture et de recherche. Les brouillons de relance vivent uniquement dans le recap Notion, sous forme de texte que Lucie copiera et enverra elle-même ; ils ne sont jamais déposés dans Slack ni dans Gmail, pas même comme brouillon.
 
 ## 1. Fenêtre de temps
 
@@ -19,7 +19,7 @@ La fenêtre commence à 00:00 (heure de Paris) du dernier jour ouvré strictemen
 - Lundi : c'est le vendredi précédent à 00:00, week-end inclus.
 - Jour férié en France entre-temps : on remonte au jour ouvré d'avant. Exemple : le mardi après un lundi férié, la fenêtre part du vendredi 00:00.
 
-Calcule les dates avec `date` en bash (`TZ=Europe/Paris`), pas de tête, et vérifie les fériés français (fixes : 1er janvier, 1er mai, 8 mai, 14 juillet, 15 août, 1er novembre, 11 novembre, 25 décembre ; mobiles : lundi de Pâques, Ascension, lundi de Pentecôte, dont tu calcules les dates de l'année). Convertis le début de fenêtre en timestamp Unix pour les paramètres `oldest` / `after` de Slack. Annonce la fenêtre en tête du recap.
+Calcule les dates avec `date` en bash (`TZ=Europe/Paris`), pas de tête, et vérifie les fériés français (fixes : 1er janvier, 1er mai, 8 mai, 14 juillet, 15 août, 1er novembre, 11 novembre, 25 décembre ; mobiles : lundi de Pâques, Ascension, lundi de Pentecôte, dont tu calcules les dates de l'année). Convertis le début de fenêtre en timestamp Unix pour les paramètres `oldest` / `after` de Slack (et utilise la même date pour le filtre `after:` de la recherche Gmail). Annonce la fenêtre en tête du recap.
 
 ## 2. Sources à parcourir
 
@@ -29,7 +29,9 @@ Calcule les dates avec `date` en bash (`TZ=Europe/Paris`), pas de tête, et vér
 
 L'identifiant Slack de Lucie est `U074GE4K5TN`. Pour chaque message qui ouvre ou fait vivre un fil, lis le fil en entier (`slack_read_thread`) : la réponse ou la résolution est souvent dans le fil, et c'est ce qui permet de savoir ce que Lucie a fait et ce qu'on attend encore d'elle. Dédoublonne : une conversation trouvée par plusieurs voies ne compte qu'une fois.
 
-Ignore le bruit : notifications de bots et de déploiement sans action (#2-deploiement-prod, #2-gitpull-impact…) sauf incident ou échec, discussions purement sociales, sauf si elles contiennent une demande. Si un canal est inaccessible, note-le dans le recap plutôt que de l'ignorer en silence.
+4. **Ses mails Gmail** reçus dans la fenêtre, tous, via l'outil de recherche Gmail `search_threads` (par exemple `after:<date de début>`, sans restreindre à la boîte de réception pour ne pas rater un mail rangé par un filtre). Lis chaque conversation en entier avec `get_thread` (ou `get_message` pour un message isolé), pas seulement le dernier message, pour savoir si Lucie a déjà répondu. Cherche aussi ses mails **envoyés** dans la fenêtre (`in:sent after:<date>`) : ils alimentent « Sujets traités » (ce qu'elle a répondu) et « Relance à faire » (ce qu'elle a demandé sans réponse). Dans le recap, le canal s'écrit `Gmail` suivi de l'expéditeur, par exemple « Gmail (Elisabeth) » ; le lien est celui de la conversation Gmail (`https://mail.google.com/mail/u/0/#inbox/<id de conversation>`). Si un même sujet existe sur Slack et par mail, ne fais qu'une ligne et cite les deux canaux (« #2-produit + Gmail »). Les mêmes règles de classement (section 3), d'importance (section 4) et de Top infos (section 5) s'appliquent aux mails comme à Slack.
+
+Ignore le bruit côté Slack : notifications de bots et de déploiement sans action (#2-deploiement-prod, #2-gitpull-impact…) sauf incident ou échec, discussions purement sociales, sauf si elles contiennent une demande. Côté Gmail, ignore de la même façon newsletters, publicités, notifications automatiques (outils, réseaux sociaux, confirmations) et mails purement informatifs sans demande, sauf alerte réelle (sécurité, facture impayée, échec, échéance). Si un canal ou la boîte Gmail est inaccessible, note-le dans le recap plutôt que de l'ignorer en silence.
 
 ## 3. Classer chaque sujet
 
@@ -89,7 +91,7 @@ Page cible : `https://app.notion.com/p/d813575afd7441e6b2d6a6e8c6e7affc` (page �
 3. Le titre du toggle est `Récap du Jour — <jour> <JJ/MM/AAAA>` (date du jour de génération). Le contenu du toggle suit exactement ce gabarit :
 
 ```
-Fenêtre : <début> → <fin> · Sources : canaux 2-/5-, DMs/groupes, mentions
+Fenêtre : <début> → <fin> · Sources : canaux 2-/5-, DMs/groupes, mentions, Gmail
 
 ## Top infos
 1. <info> — <pourquoi important> · <canal> · <lien>
@@ -113,7 +115,8 @@ Règles de rédaction :
 
 - Dans « Relance à faire », la colonne « Ce que je dois faire » dit qui relancer, sur quoi, depuis combien de jours ouvrés, et contient un brouillon de message de relance de une à deux phrases, cordial, dans la langue de la conversation. Ce brouillon est écrit dans Notion, pas dans Slack : Lucie le copie et l'envoie elle-même.
 - « Next step potentielle » peut rester vide (« — ») quand il n'y en a pas, ne l'invente pas.
-- Le lien est le permalien Slack du message ou du fil. Le workspace est `hability-permanents.slack.com` : le format est `https://hability-permanents.slack.com/archives/<channel_id>/p<ts sans le point>`. Pour un message dans un fil, ajoute `?thread_ts=<ts du parent>&cid=<channel_id>`. Mets le nom du canal avec son `#`.
+- Pour un mail, la colonne « Canal » contient `Gmail (<prénom de l'expéditeur>)` et le lien est celui de la conversation Gmail.
+- Pour Slack, le lien est le permalien Slack du message ou du fil. Le workspace est `hability-permanents.slack.com` : le format est `https://hability-permanents.slack.com/archives/<channel_id>/p<ts sans le point>`. Pour un message dans un fil, ajoute `?thread_ts=<ts du parent>&cid=<channel_id>`. Mets le nom du canal avec son `#`.
 - Une ligne par sujet, paraphrase, pas de longues citations, prénoms plutôt qu'identifiants.
 - Si une section est vide, écris « Rien » : cela confirme que tu as regardé.
 
@@ -121,4 +124,4 @@ Règles de rédaction :
 
 Après publication, donne le lien de la page Notion, puis 3 à 5 lignes : nombre d'éléments à traiter et de relances, le point le plus urgent. Ne recopie pas le recap. Signale ce qui n'a pas pu être couvert (canal inaccessible, fil introuvable, DMs sans résultat, volume élevé survolé).
 
-Si Slack ou Notion n'est pas disponible dans la session, dis-le et invite Lucie à connecter le connecteur correspondant dans claude.ai, sans inventer de contenu.
+Si Slack ou Notion n'est pas disponible dans la session, dis-le et invite Lucie à connecter le connecteur correspondant dans claude.ai, sans inventer de contenu. Si seul Gmail manque, fais quand même le recap Slack, écris en tête du toggle « Gmail non couvert (connecteur absent) » et invite Lucie à connecter Gmail dans claude.ai.
